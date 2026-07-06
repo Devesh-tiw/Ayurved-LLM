@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayurvedic Voice AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #F4F9F4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .chat-container {
+            background-color: white;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        /* Language Toggle Design */
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            color: #2C5F2D;
+            margin: 0;
+        }
+
+        .lang-toggle {
+            display: flex;
+            background: #E8F1E8;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .lang-toggle input {
+            display: none;
+        }
+
+        .lang-toggle label {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2C5F2D;
+            transition: 0.3s;
+        }
+
+        .lang-toggle input:checked+label {
+            background: #97BC62;
+            color: white;
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #E8F1E8;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background-color: #FAFCFA;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        .user-msg {
+            background-color: #2C5F2D;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 2px;
+        }
+
+        .ai-msg {
+            background-color: #E8F1E8;
+            color: #333;
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 2px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #97BC62;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #2C5F2D;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="chat-container">
+        <div class="header-area">
+            <h2>🌿 Ayurvedic AI</h2>
+
+            <div class="lang-toggle">
+                <input type="radio" id="lang-en" name="language" value="en" checked>
+                <label for="lang-en">English</label>
+
+                <input type="radio" id="lang-hi" name="language" value="hi">
+                <label for="lang-hi">हिंदी</label>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message ai-msg">Namaste! Choose your language at the top, then tell me your symptoms.</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Type your symptoms here..."
+                onkeypress="handleKeyPress(event)">
+            <button id="sendBtn" onclick="sendMessage()">Ask</button>
+        </div>
+
+        <audio id="audioPlayer" controls style="margin-top: 15px; width: 100%;"></audio>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chatBox");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const audioPlayer = document.getElementById("audioPlayer");
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // GET THE SELECTED LANGUAGE
+            const selectedLang = document.querySelector('input[name="language"]:checked').value;
+
+            // 1. Show User Message
+            appendMessage(text, "user-msg");
+            userInput.value = "";
+            sendBtn.disabled = true;
+            sendBtn.innerText = "...";
+
+            // 2. Send to Python Backend (Now sending the language too!)
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, language: selectedLang })
+                });
+
+                const data = await response.json();
+
+                // 3. Show AI Answer
+                appendMessage(data.answer, "ai-msg");
+
+                // 4. Play Audio
+                audioPlayer.src = data.audio_url;
+                audioPlayer.play();
+
+            } catch (error) {
+                appendMessage("Sorry, the server is offline.", "ai-msg");
+            }
+
+            sendBtn.disabled = false;
+            sendBtn.innerText = "Ask";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendMessage(text, className) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerText = text;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>

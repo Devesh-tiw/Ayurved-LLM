@@ -1,0 +1,4 @@
+.env
+__pycache__/
+venv/
+ayurveda_vector_db/
