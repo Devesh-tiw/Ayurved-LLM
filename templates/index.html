@@ -211,15 +211,11 @@
             micBtn.style.display = "none"; // Hide mic if browser doesn't support it
         }
 
-        // 3. SENDING MESSAGE LOGIC
-        // 3. SENDING MESSAGE LOGIC
             async function sendMessage() {
                 const text = userInput.value.trim();
                 if (!text) return;
 
-                // --- THE AUDIO UNLOCK TRICK ---
-                // Play a tiny, silent sound immediately when the button is clicked 
-                // so the browser grants us permission to play the real audio later!
+              
                 audioPlayer.volume = 0;
                 audioPlayer.play().catch(e => { });
                 audioPlayer.pause();
@@ -259,7 +255,7 @@
                 askBtn.disabled = false;
                 askBtn.innerText = "Ask";
             }
-        // Helper function to draw chat bubbles
+      
         function appendMessage(text, className) {
             const msgDiv = document.createElement("div");
             msgDiv.className = `message ${className}`;
