@@ -27,7 +27,6 @@
             height: 80vh;
         }
 
-        /* Language Toggle Design */
         .header-area {
             display: flex;
             justify-content: space-between;
@@ -98,9 +97,11 @@
             border-bottom-left-radius: 2px;
         }
 
-        .input-area {
+        /* Fixed the CSS class name here to match your HTML */
+        .input-container {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         input[type="text"] {
@@ -151,40 +152,78 @@
         </div>
 
         <div class="chat-box" id="chatBox">
-            <div class="message ai-msg">Namaste! Choose your language at the top, then tell me your symptoms.</div>
+            <div class="message ai-msg">Namaste! Choose your language at the top, then tell me your symptoms or click
+                the microphone to speak!</div>
         </div>
 
-        <div class="input-area">
-            <input type="text" id="userInput" placeholder="Type your symptoms here..."
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your symptoms here..."
                 onkeypress="handleKeyPress(event)">
-            <button id="sendBtn" onclick="sendMessage()">Ask</button>
+
+            <button id="mic-btn"
+                style="background-color: #ff4757; color: white; border-radius: 50%; border: none; padding: 15px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">🎙️</button>
+
+            <button id="ask-btn">Ask</button>
         </div>
 
-        <audio id="audioPlayer" controls style="margin-top: 15px; width: 100%;"></audio>
+        <audio id="ai-audio" controls style="display: none;"></audio>
     </div>
 
     <script>
+        // 1. Element References (All IDs match perfectly now!)
         const chatBox = document.getElementById("chatBox");
-        const userInput = document.getElementById("userInput");
-        const sendBtn = document.getElementById("sendBtn");
-        const audioPlayer = document.getElementById("audioPlayer");
+        const userInput = document.getElementById("user-input");
+        const askBtn = document.getElementById("ask-btn");
+        const micBtn = document.getElementById("mic-btn");
+        const audioPlayer = document.getElementById("ai-audio");
 
+        // Allow hitting "Enter" to send
         function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+        askBtn.addEventListener('click', sendMessage);
 
+        // 2. SPEECH-TO-TEXT LOGIC
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+
+            micBtn.addEventListener('click', () => {
+                // Check if Hindi is selected to understand Hindi voice!
+                const isHindi = document.getElementById('lang-hi').checked;
+                recognition.lang = isHindi ? 'hi-IN' : 'en-US';
+
+                recognition.start();
+                micBtn.innerText = "🔴"; // Turn red while listening
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript; // Put words in the box
+                micBtn.innerText = "🎙️"; // Reset mic icon
+
+                // Automatically send the message after talking!
+                sendMessage();
+            };
+
+            recognition.onerror = () => {
+                micBtn.innerText = "🎙️"; // Reset if there's an error
+            };
+        } else {
+            micBtn.style.display = "none"; // Hide mic if browser doesn't support it
+        }
+
+        // 3. SENDING MESSAGE LOGIC
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            // GET THE SELECTED LANGUAGE
             const selectedLang = document.querySelector('input[name="language"]:checked').value;
 
-            // 1. Show User Message
+            // Show User Message
             appendMessage(text, "user-msg");
             userInput.value = "";
-            sendBtn.disabled = true;
-            sendBtn.innerText = "...";
+            askBtn.disabled = true;
+            askBtn.innerText = "...";
 
-            // 2. Send to Python Backend (Now sending the language too!)
             try {
                 const response = await fetch('/ask', {
                     method: 'POST',
@@ -194,22 +233,24 @@
 
                 const data = await response.json();
 
-                // 3. Show AI Answer
+                // Show AI Answer
                 appendMessage(data.answer, "ai-msg");
 
-                // 4. Play Audio
-                audioPlayer.src = data.audio_url;
-                audioPlayer.play();
+                // Auto-Play Audio!
+                if (data.audio_url) {
+                    audioPlayer.src = data.audio_url;
+                    audioPlayer.play();
+                }
 
             } catch (error) {
                 appendMessage("Sorry, the server is offline.", "ai-msg");
             }
 
-            sendBtn.disabled = false;
-            sendBtn.innerText = "Ask";
-            chatBox.scrollTop = chatBox.scrollHeight;
+            askBtn.disabled = false;
+            askBtn.innerText = "Ask";
         }
 
+        // Helper function to draw chat bubbles
         function appendMessage(text, className) {
             const msgDiv = document.createElement("div");
             msgDiv.className = `message ${className}`;
