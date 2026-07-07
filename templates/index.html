@@ -212,44 +212,53 @@
         }
 
         // 3. SENDING MESSAGE LOGIC
-        async function sendMessage() {
-            const text = userInput.value.trim();
-            if (!text) return;
+        // 3. SENDING MESSAGE LOGIC
+            async function sendMessage() {
+                const text = userInput.value.trim();
+                if (!text) return;
 
-            const selectedLang = document.querySelector('input[name="language"]:checked').value;
+                // --- THE AUDIO UNLOCK TRICK ---
+                // Play a tiny, silent sound immediately when the button is clicked 
+                // so the browser grants us permission to play the real audio later!
+                audioPlayer.volume = 0;
+                audioPlayer.play().catch(e => { });
+                audioPlayer.pause();
+                audioPlayer.volume = 1;
+                // ------------------------------
 
-            // Show User Message
-            appendMessage(text, "user-msg");
-            userInput.value = "";
-            askBtn.disabled = true;
-            askBtn.innerText = "...";
+                const selectedLang = document.querySelector('input[name="language"]:checked').value;
 
-            try {
-                const response = await fetch('/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, language: selectedLang })
-                });
+                // Show User Message
+                appendMessage(text, "user-msg");
+                userInput.value = "";
+                askBtn.disabled = true;
+                askBtn.innerText = "...";
 
-                const data = await response.json();
+                try {
+                    const response = await fetch('/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text, language: selectedLang })
+                    });
 
-                // Show AI Answer
-                appendMessage(data.answer, "ai-msg");
+                    const data = await response.json();
 
-                // Auto-Play Audio!
-                if (data.audio_url) {
-                    audioPlayer.src = data.audio_url;
-                    audioPlayer.play();
+                    // Show AI Answer
+                    appendMessage(data.answer, "ai-msg");
+
+                    // Play the real audio!
+                    if (data.audio_url) {
+                        audioPlayer.src = data.audio_url;
+                        audioPlayer.play();
+                    }
+
+                } catch (error) {
+                    appendMessage("Sorry, the server is offline.", "ai-msg");
                 }
 
-            } catch (error) {
-                appendMessage("Sorry, the server is offline.", "ai-msg");
+                askBtn.disabled = false;
+                askBtn.innerText = "Ask";
             }
-
-            askBtn.disabled = false;
-            askBtn.innerText = "Ask";
-        }
-
         // Helper function to draw chat bubbles
         function appendMessage(text, className) {
             const msgDiv = document.createElement("div");
